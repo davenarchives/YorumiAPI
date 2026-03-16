@@ -87,23 +87,13 @@ router.get('/search', async (req, res) => {
     }
 });
 
-// Manga by ID
-router.get('/:id', async (req, res) => {
+// Manga genres
+router.get('/genres', (req, res) => {
     try {
-        const id = parseInt(req.params.id);
-        if (isNaN(id)) {
-            res.status(400).json({ error: 'Invalid ID' });
-            return;
-        }
-
-        const data = await anilistService.getMangaById(id);
-        if (!data) {
-            res.status(404).json({ error: 'Manga not found' });
-            return;
-        }
-        res.json(data);
+        const genres = anilistService.getGenres();
+        res.json(genres);
     } catch (error) {
-        console.error('Error in manga by ID route:', error);
+        console.error('Error in manga genres route:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -130,6 +120,27 @@ router.get('/random', async (req, res) => {
         res.json(data);
     } catch (error) {
         console.error('Error in random manga route:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Manga by ID
+router.get('/:id', async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        if (isNaN(id)) {
+            res.status(400).json({ error: 'Invalid ID' });
+            return;
+        }
+
+        const data = await anilistService.getMangaById(id);
+        if (!data) {
+            res.status(404).json({ error: 'Manga not found' });
+            return;
+        }
+        res.json(data);
+    } catch (error) {
+        console.error('Error in manga by ID route:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
