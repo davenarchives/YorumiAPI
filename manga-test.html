@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yorumi Manga Reader Test</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0d0d0d; color: #eee; min-height: 100vh; }
+
+        /* ---- Header ---- */
+        .header { background: #111; border-bottom: 1px solid #222; padding: 14px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+        .header h1 { font-size: 1rem; font-weight: 700; color: #a78bfa; white-space: nowrap; }
+        .search-bar { display: flex; gap: 8px; flex: 1; max-width: 500px; }
+        .search-bar input { flex: 1; padding: 8px 14px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #fff; font-size: 0.9rem; }
+        .search-bar button, .btn { padding: 8px 18px; border: none; border-radius: 8px; background: #7c3aed; color: white; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: background 0.2s; white-space: nowrap; }
+        .btn:hover, .search-bar button:hover { background: #6d28d9; }
+        .btn-outline { background: transparent; border: 1px solid #555; color: #ccc; }
+        .btn-outline:hover { background: #222; }
+
+        /* ---- Layout ---- */
+        .layout { display: flex; height: calc(100vh - 57px); }
+
+        /* ---- Sidebar: Search & Chapters ---- */
+        .sidebar { width: 300px; min-width: 260px; border-right: 1px solid #1e1e1e; display: flex; flex-direction: column; overflow: hidden; }
+        .sidebar-section { padding: 12px; border-bottom: 1px solid #1e1e1e; }
+        .sidebar-section label { font-size: 0.7rem; color: #666; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
+        .sidebar-section input { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #fff; font-size: 0.85rem; }
+        .search-results { flex: 0 0 auto; overflow-y: auto; max-height: 220px; }
+        .search-result-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #1a1a1a; transition: background 0.15s; display: flex; gap: 10px; align-items: flex-start; }
+        .search-result-item:hover { background: #1a1a1a; }
+        .search-result-item.active { background: #1e1535; }
+        .result-thumb { width: 36px; height: 52px; object-fit: cover; border-radius: 4px; flex-shrink: 0; background: #222; }
+        .result-info { overflow: hidden; }
+        .result-title { font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e2e8f0; }
+        .result-meta { font-size: 0.7rem; color: #666; margin-top: 2px; }
+
+        /* ---- Chapter list ---- */
+        .chapter-header { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e1e1e; }
+        .chapter-header span { font-size: 0.75rem; color: #666; }
+        .chapter-list { flex: 1; overflow-y: auto; }
+        .chapter-item { padding: 9px 14px; cursor: pointer; border-bottom: 1px solid #111; font-size: 0.82rem; color: #bbb; display: flex; justify-content: space-between; align-items: center; }
+        .chapter-item:hover { background: #1a1a1a; color: #fff; }
+        .chapter-item.active { background: #1e1535; color: #a78bfa; }
+        .chapter-num { font-weight: 600; }
+        .chapter-date { font-size: 0.7rem; color: #555; }
+
+        /* ---- Reader ---- */
+        .reader { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; gap: 4px; background: #0a0a0a; }
+        .reader-placeholder { color: #444; font-size: 0.9rem; margin-top: 80px; text-align: center; }
+        .reader-placeholder span { display: block; font-size: 2.5rem; margin-bottom: 12px; }
+        .page-img { width: 100%; max-width: 800px; display: block; border-radius: 2px; }
+        .page-img.loading { background: #111; height: 400px; border-radius: 4px; animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.7; } }
+
+        /* ---- Status bar ---- */
+        #status { font-size: 0.78rem; color: #666; padding: 6px 14px; background: #111; border-top: 1px solid #1e1e1e; }
+        #status.ok { color: #4ade80; }
+        #status.error { color: #f87171; }
+        #status.loading { color: #a78bfa; }
+
+        /* scrollbar */
+        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>📖 Yorumi Manga</h1>
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search manga... (e.g. one piece)" />
+        <button onclick="searchManga()">Search</button>
+    </div>
+    <div id="chaptersNav" style="display:flex;gap:8px;margin-left:auto;display:none;">
+        <button class="btn btn-outline" onclick="prevChapter()">← Prev</button>
+        <button class="btn btn-outline" onclick="nextChapter()">Next →</button>
+    </div>
+</div>
+
+<div class="layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <!-- Search Results -->
+        <div class="sidebar-section">
+            <label>Results</label>
+        </div>
+        <div id="searchResults" class="search-results"></div>
+
+        <!-- Chapter List -->
+        <div class="chapter-header">
+            <label style="margin:0;font-size:0.7rem;color:#666;text-transform:uppercase;letter-spacing:0.05em;">Chapters</label>
+            <span id="chapterCount"></span>
+        </div>
+        <div id="chapterList" class="chapter-list"></div>
+    </div>
+
+    <!-- Reader -->
+    <div class="reader" id="reader">
+        <div class="reader-placeholder">
+            <span>📚</span>
+            Search for a manga and select a chapter to start reading.
+        </div>
+    </div>
+</div>
+
+<div id="status">Ready.</div>
+
+<script>
+    const BASE = 'http://localhost:3001/api/manga/scraper';
+    let chapters = [];
+    let currentChapterIdx = -1;
+
+    function setStatus(msg, type = '') {
+        const el = document.getElementById('status');
+        el.textContent = msg;
+        el.className = type;
+    }
+
+    async function searchManga() {
+        const q = document.getElementById('searchInput').value.trim();
+        if (!q) return;
+        setStatus(`Searching for "${q}"...`, 'loading');
+
+        const res = await fetch(`${BASE}/search?q=${encodeURIComponent(q)}`);
+        const json = await res.json();
+        const results = json.data || [];
+
+        setStatus(`Found ${results.length} results.`, results.length ? 'ok' : '');
+        const container = document.getElementById('searchResults');
+        container.innerHTML = '';
+
+        results.forEach(manga => {
+            const div = document.createElement('div');
+            div.className = 'search-result-item';
+            div.innerHTML = `
+                <img class="result-thumb" src="${manga.thumbnail || ''}" onerror="this.style.display='none'" />
+                <div class="result-info">
+                    <div class="result-title" title="${manga.title}">${manga.title}</div>
+                    <div class="result-meta">${manga.latestChapter ? 'Ch. ' + manga.latestChapter : ''} ${manga.status || ''}</div>
+                </div>
+            `;
+            div.onclick = () => {
+                document.querySelectorAll('.search-result-item').forEach(d => d.classList.remove('active'));
+                div.classList.add('active');
+                loadChapters(manga.id);
+            };
+            container.appendChild(div);
+        });
+    }
+
+    async function loadChapters(mangaId) {
+        setStatus('Loading chapters...', 'loading');
+        document.getElementById('chapterList').innerHTML = '';
+        document.getElementById('chapterCount').textContent = '';
+        chapters = [];
+        currentChapterIdx = -1;
+        document.getElementById('chaptersNav').style.display = 'none';
+
+        const res = await fetch(`${BASE}/chapters/${encodeURIComponent(mangaId)}`);
+        const json = await res.json();
+        chapters = json.chapters || [];
+
+        setStatus(`${chapters.length} chapters loaded. Click one to read.`, 'ok');
+        document.getElementById('chapterCount').textContent = `${chapters.length} chapters`;
+
+        const list = document.getElementById('chapterList');
+        chapters.forEach((ch, i) => {
+            const div = document.createElement('div');
+            div.className = 'chapter-item';
+            div.id = `ch-${i}`;
+            div.innerHTML = `
+                <span class="chapter-num">${ch.title || ('Chapter ' + ch.number)}</span>
+                <span class="chapter-date">${ch.date || ''}</span>
+            `;
+            div.onclick = () => openChapter(i);
+            list.appendChild(div);
+        });
+
+        if (chapters.length > 0) {
+            document.getElementById('chaptersNav').style.display = 'flex';
+        }
+    }
+
+    async function openChapter(idx) {
+        if (idx < 0 || idx >= chapters.length) return;
+        currentChapterIdx = idx;
+        const ch = chapters[idx];
+
+        // Highlight active chapter
+        document.querySelectorAll('.chapter-item').forEach(d => d.classList.remove('active'));
+        const el = document.getElementById(`ch-${idx}`);
+        if (el) { el.classList.add('active'); el.scrollIntoView({ block: 'nearest' }); }
+
+        setStatus(`Loading pages for ${ch.title || 'chapter ' + ch.number}...`, 'loading');
+
+        const reader = document.getElementById('reader');
+        reader.innerHTML = ''; // Clear
+
+        // Show skeleton loaders
+        for (let i = 0; i < 5; i++) {
+            const img = document.createElement('div');
+            img.className = 'page-img loading';
+            reader.appendChild(img);
+        }
+
+        const chapterUrl = ch.url || ch.id;
+        const res = await fetch(`${BASE}/pages?url=${encodeURIComponent(chapterUrl)}`);
+        const json = await res.json();
+        const pages = json.pages || [];
+
+        reader.innerHTML = '';
+        if (!pages.length) {
+            reader.innerHTML = '<div class="reader-placeholder"><span>❌</span>No pages found for this chapter.</div>';
+            setStatus('No pages found.', 'error');
+            return;
+        }
+
+        setStatus(`${pages.length} pages loaded. Reading ${ch.title || 'chapter ' + ch.number}.`, 'ok');
+        reader.scrollTo(0, 0);
+
+        pages.forEach((page, i) => {
+            const pageUrl = typeof page === 'string' ? page : (page.url || page.imageUrl || page.img);
+            const img = document.createElement('img');
+            img.className = 'page-img';
+            img.alt = `Page ${i + 1}`;
+            img.loading = 'lazy';
+            img.src = pageUrl;
+            img.onerror = () => { img.style.display = 'none'; };
+            reader.appendChild(img);
+        });
+    }
+
+    function prevChapter() {
+        if (currentChapterIdx > 0) openChapter(currentChapterIdx - 1);
+    }
+    function nextChapter() {
+        if (currentChapterIdx < chapters.length - 1) openChapter(currentChapterIdx + 1);
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowLeft') prevChapter();
+        if (e.key === 'ArrowRight') nextChapter();
+    });
+
+    // Allow pressing Enter in search
+    document.getElementById('searchInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') searchManga();
+    });
+</script>
+
+</body>
+</html>
