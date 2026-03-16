@@ -101,7 +101,7 @@ Search anime via AniList (POST body variant).
 { "query": "one piece" }
 ```
 
-#### `GET https://yorumiapi.onrender.com/api/anime/anime/:id`
+#### `GET https://yorumiapi.onrender.com/api/anime/:id`
 Fetch full anime details by AniList ID.
 
 #### `POST https://yorumiapi.onrender.com/api/anime/batch-covers`
@@ -282,6 +282,9 @@ Search manga via AniList.
 
 #### `GET https://yorumiapi.onrender.com/api/manga/:id`
 Full manga details by AniList ID.
+
+#### `GET https://yorumiapi.onrender.com/api/manga/genres`
+List of manga genres.
 
 #### `GET https://yorumiapi.onrender.com/api/manga/genre/:name`
 Manga by genre.
