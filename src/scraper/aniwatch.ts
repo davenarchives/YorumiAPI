@@ -1,4 +1,4 @@
-import { ANIME } from "@consumet/extensions";
+import { HiAnime } from "aniwatch";
 
 export interface AnimeSearchResult {
     id: string;
@@ -44,32 +44,30 @@ export interface StreamResponse {
 }
 
 export class AniwatchScraper {
-    private provider: InstanceType<typeof ANIME.AnimeKai>;
+    private scraper: InstanceType<typeof HiAnime.Scraper>;
 
     constructor() {
-        this.provider = new ANIME.AnimeKai();
+        this.scraper = new HiAnime.Scraper();
     }
 
     async close() {}
 
     async search(query: string): Promise<AnimeSearchResult[]> {
         try {
-            const res = await this.provider.search(query);
-            return (res.results || []).map((item: any) => ({
+            const res = await this.scraper.search(query, 1);
+            return (res.animes || []).map((item: any) => ({
                 id: item.id,
                 session: item.id,
-                title: typeof item.title === 'object'
-                    ? (item.title.english || item.title.romaji || item.title.native || '')
-                    : (item.title as string),
+                title: item.name,
                 url: `/anime/${item.id}`,
-                poster: item.image,
+                poster: item.poster,
                 type: item.type,
-                episodes: item.episodes || item.totalEpisodes,
-                sub: item.sub,
-                dub: item.dub,
+                episodes: item.episodes?.sub || item.episodes?.dub || 0,
+                sub: item.episodes?.sub,
+                dub: item.episodes?.dub,
             }));
         } catch (error) {
-            console.error('AnimeKai search error:', error);
+            console.error('aniwatch search error:', error);
             return [];
         }
     }
@@ -80,42 +78,51 @@ export class AniwatchScraper {
         debug: boolean = false
     ): Promise<{ episodes: Episode[], lastPage: number, raw?: string }> {
         try {
-            const info = await this.provider.fetchAnimeInfo(animeSessionId);
-            const eps = (info.episodes || []) as any[];
-            const episodes: Episode[] = eps.map((ep: any) => ({
-                id: ep.id,
-                session: ep.id,
-                episodeNumber: ep.number,
-                url: `/play/${animeSessionId}/${ep.id}`,
-                title: ep.title,
-                isSubbed: ep.isSubbed,
-                isDubbed: ep.isDubbed,
-                isFiller: ep.isFiller,
-            }));
-            return { episodes, lastPage: 1 };
+            const res = await this.scraper.getEpisodes(animeSessionId);
+            const eps = (res.episodes || []) as any[];
+            return {
+                episodes: eps.map((ep: any) => ({
+                    id: ep.episodeId,
+                    session: ep.episodeId,
+                    episodeNumber: ep.number,
+                    url: `/play/${animeSessionId}/${ep.episodeId}`,
+                    title: ep.title,
+                    isFiller: ep.isFiller,
+                    // aniwatch package doesn't provide per-episode sub/dub flags in the list
+                    isSubbed: true, 
+                    isDubbed: false,
+                })),
+                lastPage: 1
+            };
         } catch (error) {
-            console.error('AnimeKai getEpisodes error:', error);
+            console.error('aniwatch getEpisodes error:', error);
             return { episodes: [], lastPage: 1 };
         }
     }
 
     async getLinks(animeSession: string, episodeSession: string): Promise<StreamResponse | null> {
         try {
-            const res = await this.provider.fetchEpisodeSources(episodeSession);
+            // HiAnime requires checking servers first
+            const servers = await this.scraper.getEpisodeServers(episodeSession);
+            if (!servers.sub?.length && !servers.dub?.length && !servers.raw?.length) {
+                return null;
+            }
+
+            const res = await this.scraper.getEpisodeSources(episodeSession);
             const sources = (res.sources || []).map((source: any) => ({
-                quality: source.quality || 'auto',
+                quality: 'auto',
                 audio: 'sub',
                 url: source.url,
                 directUrl: source.url,
-                isHls: source.isM3U8 || false,
+                isHls: source.url.includes('.m3u8') || source.type === 'hls',
             }));
             const subtitles = (res.subtitles || []).map((sub: any) => ({
                 url: sub.url,
                 lang: sub.lang || sub.language || 'Unknown',
             }));
-            return { headers: res.headers || {}, sources, subtitles };
+            return { headers: { 'Referer': 'https://hianime.to' }, sources, subtitles };
         } catch (error) {
-            console.error('AnimeKai getLinks error:', error);
+            console.error('aniwatch getLinks error:', error);
             return null;
         }
     }
