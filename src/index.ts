@@ -1,6 +1,24 @@
 import 'dotenv/config';
+import axios from 'axios';
 import express from 'express';
 import cors from 'cors';
+
+// Inject browser-like headers on every outgoing axios request.
+// This applies to all axios calls including those made internally by @consumet/extensions,
+// which helps bypass Cloudflare bot detection when running on cloud server IPs (Render etc.)
+axios.interceptors.request.use((config) => {
+    config.headers = config.headers || {};
+    if (!config.headers['User-Agent']) {
+        config.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    }
+    if (!config.headers['Accept-Language']) {
+        config.headers['Accept-Language'] = 'en-US,en;q=0.9';
+    }
+    if (!config.headers['Accept']) {
+        config.headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8';
+    }
+    return config;
+});
 
 import anilistRoutes from './api/anilist/anilist.routes';
 import mangaScraperRoutes from './api/scraper/mangascraper.routes';
