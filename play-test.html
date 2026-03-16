@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yorumi Stream Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background: #0d0d0d; color: #eee; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; min-height: 100vh; }
+        h1 { margin-bottom: 24px; font-size: 1.4rem; color: #aaa; }
+        .controls { margin-bottom: 16px; display: flex; gap: 10px; width: 100%; max-width: 800px; flex-wrap: wrap; }
+        input { flex: 1; min-width: 200px; padding: 10px 14px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #fff; font-size: 0.9rem; }
+        button { padding: 10px 24px; border: none; border-radius: 8px; background: #7c3aed; color: white; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: background 0.2s; }
+        button:hover { background: #6d28d9; }
+        video { max-width: 800px; width: 100%; aspect-ratio: 16/9; background: black; border-radius: 10px; }
+        #status { margin: 14px 0; font-size: 0.85rem; color: #888; max-width: 800px; width: 100%; }
+        #status.ok { color: #4ade80; }
+        #status.error { color: #f87171; }
+        #results { max-width: 800px; width: 100%; display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+        .ep-btn { padding: 6px 14px; border: 1px solid #444; border-radius: 6px; background: #1a1a1a; color: #ccc; cursor: pointer; font-size: 0.8rem; }
+        .ep-btn:hover { background: #333; }
+    </style>
+</head>
+<body>
+    <h1>Yorumi API — Stream Test</h1>
+
+    <div class="controls">
+        <input type="text" id="animeId" placeholder="Anime ID (e.g. naruto-shippuden)" value="naruto-shippuden">
+        <button onclick="fetchEpisodes()">Load Episodes</button>
+    </div>
+
+    <div id="results"></div>
+    <div id="status">Enter an anime ID and click Load Episodes.</div>
+
+    <video id="video" controls crossorigin="anonymous"></video>
+
+    <script>
+        let episodeList = [];
+        const BASE = 'http://localhost:3001/api/anime';
+
+        async function fetchEpisodes() {
+            const animeId = document.getElementById('animeId').value.trim();
+            const status = document.getElementById('status');
+            const results = document.getElementById('results');
+            results.innerHTML = '';
+
+            status.className = '';
+            status.textContent = 'Loading episodes...';
+
+            try {
+                const res = await fetch(`${BASE}/episodes/${encodeURIComponent(animeId)}`);
+                const json = await res.json();
+                episodeList = json.episodes || [];
+
+                if (!episodeList.length) {
+                    status.className = 'error';
+                    status.textContent = 'No episodes found. Check the anime ID.';
+                    return;
+                }
+
+                status.className = 'ok';
+                status.textContent = `Found ${episodeList.length} episodes. Click one to play.`;
+
+                episodeList.forEach(ep => {
+                    const btn = document.createElement('button');
+                    btn.className = 'ep-btn';
+                    
+                    // An episode can be both subbed AND dubbed (dual-audio release)
+                    let label;
+                    if (ep.isSubbed && ep.isDubbed) label = ' [SUB+DUB]';
+                    else if (ep.isDubbed) label = ' [DUB]';
+                    else label = ' [SUB]'; // default is subbed
+                    btn.textContent = `Ep ${ep.episodeNumber}${label}`;
+                    
+                    btn.onclick = () => playEpisode(animeId, ep.session);
+                    results.appendChild(btn);
+                });
+            } catch (err) {
+                status.className = 'error';
+                status.textContent = 'Error: ' + err.message;
+            }
+        }
+
+        let hlsInstance = null;
+
+        async function playEpisode(animeId, epSession) {
+            const status = document.getElementById('status');
+            const video = document.getElementById('video');
+            status.className = '';
+            status.textContent = `Fetching stream for ${epSession}...`;
+
+            try {
+                const res = await fetch(`${BASE}/links/${encodeURIComponent(animeId)}/${encodeURIComponent(epSession)}`);
+                const json = await res.json();
+
+                if (!json.data || !json.data.length) {
+                    status.className = 'error';
+                    status.textContent = 'No stream links returned.';
+                    return;
+                }
+
+                const stream = json.data[0];
+                const referer = json.headers?.Referer || '';
+                
+                // Route stream through our backend proxy to attach Referer and bypass 403
+                const proxyUrl = `${BASE}/proxy?url=${encodeURIComponent(stream.url)}&referer=${encodeURIComponent(referer)}`;
+
+                status.className = 'ok';
+                status.textContent = `Playing: ${stream.quality} HLS: ${stream.isHls} (Proxied)`;
+
+                if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+
+                // Attach subtitles BEFORE loading video — otherwise hls.js or the browser resets tracks
+                // Remove old tracks first
+                Array.from(video.querySelectorAll('track')).forEach(t => t.remove());
+                if (json.subtitles && json.subtitles.length > 0) {
+                    json.subtitles.forEach((sub) => {
+                        if (sub.lang && sub.lang.toLowerCase() === 'thumbnails') return;
+                        const track = document.createElement('track');
+                        track.kind = 'subtitles';
+                        track.label = sub.lang;
+                        track.srclang = sub.lang.substring(0, 2).toLowerCase();
+                        track.src = `${BASE}/proxy?url=${encodeURIComponent(sub.url)}&referer=${encodeURIComponent(referer)}`;
+                        if (sub.lang.toLowerCase().includes('english')) {
+                            track.default = true;
+                        }
+                        video.appendChild(track);
+                    });
+                }
+
+                if (stream.isHls && Hls.isSupported()) {
+                    hlsInstance = new Hls();
+                    hlsInstance.loadSource(proxyUrl);
+                    hlsInstance.attachMedia(video);
+                    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = proxyUrl;
+                    video.play();
+                } else {
+                    video.src = proxyUrl;
+                    video.play();
+                }
+            } catch (err) {
+                status.className = 'error';
+                status.textContent = 'Error: ' + err.message;
+            }
+        }
+    </script>
+</body>
+</html>
