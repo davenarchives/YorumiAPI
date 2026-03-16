@@ -160,17 +160,14 @@ router.get('/proxy', async (req, res) => {
                 if (!trimmed || trimmed.startsWith('#')) {
                     // special case for URI tags that might have relative paths like #EXT-X-KEY:METHOD=AES-128,URI="relative.key"
                     if (trimmed.startsWith('#EXT-X-STREAM-INF:') || trimmed.startsWith('#EXT-X-MEDIA:') || trimmed.includes('URI=')) {
-                        return trimmed.replace(/URI=["']([^"']+)["']/, (match, uri) => {
-                            if (!uri.startsWith('http')) {
-                                const absoluteUri = uri.startsWith('/') ? `${urlObj.origin}${uri}` : `${basePath}${uri}`;
-                                // Route the keys/nested playlists back through our proxy
-                                return `URI="${req.protocol}://${req.get('host')}/api/anime/proxy?url=${encodeURIComponent(absoluteUri)}&referer=${encodeURIComponent(referer)}"`;
-                            }
-                            // Even if it's absolute, if it's an m3u8, proxy it
-                            if (uri.includes('.m3u8')) {
-                                return `URI="${req.protocol}://${req.get('host')}/api/anime/proxy?url=${encodeURIComponent(uri)}&referer=${encodeURIComponent(referer)}"`;
-                            }
-                            return match; // keep original if absolute and not m3u8
+                        return trimmed.replace(/URI=[\"']([^\"']+)[\"']/, (match, uri) => {
+                            // Always proxy ALL URI= values — both relative and absolute.
+                            // This covers EXT-X-KEY encryption keys (.key files) which would otherwise
+                            // be CORS-blocked when fetched directly by hls.js from the browser.
+                            const absoluteUri = uri.startsWith('http')
+                                ? uri
+                                : (uri.startsWith('/') ? `${urlObj.origin}${uri}` : `${basePath}${uri}`);
+                            return `URI="${req.protocol}://${req.get('host')}/api/anime/proxy?url=${encodeURIComponent(absoluteUri)}&referer=${encodeURIComponent(referer)}"`;
                         });
                     }
                     return line; 
