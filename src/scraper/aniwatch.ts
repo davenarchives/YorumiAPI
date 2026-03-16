@@ -44,10 +44,10 @@ export interface StreamResponse {
 }
 
 export class AniwatchScraper {
-    private provider: InstanceType<typeof ANIME.AnimeKai>;
+    private provider: InstanceType<typeof ANIME.AnimePahe>;
 
     constructor() {
-        this.provider = new ANIME.AnimeKai();
+        this.provider = new ANIME.AnimePahe();
     }
 
     async close() {
@@ -65,11 +65,9 @@ export class AniwatchScraper {
                 poster: item.image,
                 type: item.type,
                 episodes: item.episodes || item.totalEpisodes,
-                sub: item.sub,
-                dub: item.dub
             }));
         } catch (error) {
-            console.error('AnimeKai search error:', error);
+            console.error('AnimePahe search error:', error);
             return [];
         }
     }
@@ -88,14 +86,14 @@ export class AniwatchScraper {
                 episodeNumber: ep.number,
                 url: `/play/${animeSessionId}/${ep.id}`,
                 title: ep.title,
-                isSubbed: ep.isSubbed,
-                isDubbed: ep.isDubbed,
-                isFiller: ep.isFiller,
+                // AnimePahe uses isDub (true = dubbed, false = subbed)
+                isSubbed: ep.isDub === false,
+                isDubbed: ep.isDub === true,
             }));
 
             return { episodes, lastPage: 1 };
         } catch (error) {
-            console.error('AnimeKai getEpisodes error:', error);
+            console.error('AnimePahe getEpisodes error:', error);
             return { episodes: [], lastPage: 1 };
         }
     }
@@ -110,7 +108,8 @@ export class AniwatchScraper {
                 directUrl: source.url,
                 isHls: source.isM3U8 || false,
             }));
-            
+
+            // AnimePahe may not provide subtitle tracks
             const subtitles = (res.subtitles || []).map((sub: any) => ({
                 url: sub.url,
                 lang: sub.lang || sub.language || 'Unknown'
@@ -118,7 +117,7 @@ export class AniwatchScraper {
 
             return { headers: res.headers || {}, sources, subtitles };
         } catch (error) {
-            console.error('AnimeKai getLinks error:', error);
+            console.error('AnimePahe getLinks error:', error);
             return null;
         }
     }
