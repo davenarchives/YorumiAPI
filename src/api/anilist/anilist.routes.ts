@@ -112,75 +112,6 @@ router.get('/search', async (req, res) => {
 });
 
 
-// Get anime details
-router.get('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        // Hybrid Logic for Scraper IDs (e.g. s:one-piece-100)
-        if (id.startsWith('s:')) {
-            const scraperId = id.substring(2);
-            // 1. Fetch scraper info
-            const scraperDetails = await new HiAnimeScraper().getAnimeInfo(scraperId);
-            if (!scraperDetails) {
-                return res.status(404).json({ error: 'Anime not found on scraper' });
-            }
-
-            // 2. Search AniList by Title
-            const title = scraperDetails.title;
-            const searchRes = await anilistService.searchAnime(title);
-            const anilistMatch = searchRes[0];
-
-            if (anilistMatch) {
-                // 3. Get full AniList details
-                const anilistDetails = await anilistService.getMediaDetails(anilistMatch.id);
-                if (anilistDetails) {
-                    // 4. Return merged result (AniList metadata + Scraper ID hint)
-                    return res.json({
-                        ...anilistDetails,
-                        id: id, // Maintain s: prefix
-                        mal_id: anilistDetails.id, // Keep AniList/MAL ID ref as mal_id
-                        scraperId: scraperId
-                    });
-                }
-            }
-
-            // Fallback: Return mapped scraper data
-            return res.json({
-                id: id,
-                title: { romaji: scraperDetails.title, english: scraperDetails.title },
-                coverImage: { large: scraperDetails.poster },
-                description: scraperDetails.description,
-                status: scraperDetails.status,
-                episodes: scraperDetails.stats?.episodes?.sub || null,
-                format: 'TV',
-                genres: [],
-                averageScore: 0
-            });
-        }
-
-        const numericId = parseInt(id);
-        if (isNaN(numericId)) {
-            res.status(400).json({ error: 'Invalid ID' });
-            return;
-        }
-
-        const data = await anilistService.getAnimeById(numericId);
-        // Or getAnimeById was calling getMediaDetails? 
-        // anilistService.getAnimeById uses generic fetch.
-        // Let's stick to getMediaDetails which I added.
-        if (!data) {
-            res.status(404).json({ error: 'Anime not found' });
-            return;
-        }
-        res.json(data);
-    } catch (error: any) {
-        console.error('Error in anime by ID route:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-
 // Batch covers (keep for compatibility)
 router.post('/batch-covers', async (req, res) => {
     try {
@@ -268,6 +199,75 @@ router.get('/random', async (req, res) => {
         res.json(data);
     } catch (error) {
         console.error('Error in random anime route:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
+// Get anime details
+router.get('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Hybrid Logic for Scraper IDs (e.g. s:one-piece-100)
+        if (id.startsWith('s:')) {
+            const scraperId = id.substring(2);
+            // 1. Fetch scraper info
+            const scraperDetails = await new HiAnimeScraper().getAnimeInfo(scraperId);
+            if (!scraperDetails) {
+                return res.status(404).json({ error: 'Anime not found on scraper' });
+            }
+
+            // 2. Search AniList by Title
+            const title = scraperDetails.title;
+            const searchRes = await anilistService.searchAnime(title);
+            const anilistMatch = searchRes[0];
+
+            if (anilistMatch) {
+                // 3. Get full AniList details
+                const anilistDetails = await anilistService.getMediaDetails(anilistMatch.id);
+                if (anilistDetails) {
+                    // 4. Return merged result (AniList metadata + Scraper ID hint)
+                    return res.json({
+                        ...anilistDetails,
+                        id: id, // Maintain s: prefix
+                        mal_id: anilistDetails.id, // Keep AniList/MAL ID ref as mal_id
+                        scraperId: scraperId
+                    });
+                }
+            }
+
+            // Fallback: Return mapped scraper data
+            return res.json({
+                id: id,
+                title: { romaji: scraperDetails.title, english: scraperDetails.title },
+                coverImage: { large: scraperDetails.poster },
+                description: scraperDetails.description,
+                status: scraperDetails.status,
+                episodes: scraperDetails.stats?.episodes?.sub || null,
+                format: 'TV',
+                genres: [],
+                averageScore: 0
+            });
+        }
+
+        const numericId = parseInt(id);
+        if (isNaN(numericId)) {
+            res.status(400).json({ error: 'Invalid ID' });
+            return;
+        }
+
+        const data = await anilistService.getAnimeById(numericId);
+        // Or getAnimeById was calling getMediaDetails? 
+        // anilistService.getAnimeById uses generic fetch.
+        // Let's stick to getMediaDetails which I added.
+        if (!data) {
+            res.status(404).json({ error: 'Anime not found' });
+            return;
+        }
+        res.json(data);
+    } catch (error: any) {
+        console.error('Error in anime by ID route:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
