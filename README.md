@@ -16,7 +16,7 @@ npm install
 npm run dev
 ```
 
-Base URL: `http://localhost:3001`
+Base URL: `https://yorumiapi.onrender.com`
 
 ---
 
@@ -64,30 +64,30 @@ Returns API status.
 
 Base path: `/api/anime`
 
-#### `GET /api/anime/top`
+#### `GET https://yorumiapi.onrender.com/api/anime/top`
 Top-rated anime from AniList.
 | Query | Type | Description |
 |---|---|---|
 | `page` | number | Page number (default: 1) |
 | `limit` | number | Items per page (default: 20) |
 
-#### `GET /api/anime/trending`
+#### `GET https://yorumiapi.onrender.com/api/anime/trending`
 Trending anime.
 | Query | Type | Description |
 |---|---|---|
 | `page` | number | Page number |
 | `limit` | number | Items per page |
 
-#### `GET /api/anime/popular-this-season`
+#### `GET https://yorumiapi.onrender.com/api/anime/popular-this-season`
 Popular anime from the current season.
 
-#### `GET /api/anime/popular-this-month`
+#### `GET https://yorumiapi.onrender.com/api/anime/popular-this-month`
 Popular anime this month.
 
-#### `GET /api/anime/spotlight/anilist`
+#### `GET https://yorumiapi.onrender.com/api/anime/spotlight/anilist`
 Returns AniList spotlight (top 5 trending).
 
-#### `GET /api/anime/search`
+#### `GET https://yorumiapi.onrender.com/api/anime/search`
 Search anime via AniList.
 | Query | Type | Description |
 |---|---|---|
@@ -95,62 +95,62 @@ Search anime via AniList.
 | `page` | number | Page number |
 | `limit` | number | Items per page |
 
-#### `POST /api/anime/search`
+#### `POST https://yorumiapi.onrender.com/api/anime/search`
 Search anime via AniList (POST body variant).
 ```json
 { "query": "one piece" }
 ```
 
-#### `GET /api/anime/anime/:id`
+#### `GET https://yorumiapi.onrender.com/api/anime/anime/:id`
 Fetch full anime details by AniList ID.
 
-#### `POST /api/anime/batch-covers`
+#### `POST https://yorumiapi.onrender.com/api/anime/batch-covers`
 Fetch cover images for multiple anime by MAL ID.
 ```json
 { "malIds": [21, 20, 199] }
 ```
 
-#### `GET /api/anime/schedule`
+#### `GET https://yorumiapi.onrender.com/api/anime/schedule`
 Airing schedule within a time window (unix seconds).
 | Query | Type | Description |
 |---|---|---|
 | `start` | number | Start timestamp |
 | `end` | number | End timestamp |
 
-#### `GET /api/anime/genres`
+#### `GET https://yorumiapi.onrender.com/api/anime/genres`
 Returns a list of all anime genres.
 
-#### `GET /api/anime/genre/:name`
+#### `GET https://yorumiapi.onrender.com/api/anime/genre/:name`
 Anime by genre name.
 | Query | Type | Description |
 |---|---|---|
 | `page` | number | Page number |
 | `limit` | number | Items per page |
 
-#### `GET /api/anime/az-list/:letter`
+#### `GET https://yorumiapi.onrender.com/api/anime/az-list/:letter`
 Anime alphabetically by starting letter (AniList).
 | Query | Type | Description |
 |---|---|---|
 | `page` | number | Page |
 | `limit` | number | Items per page |
 
-#### `GET /api/anime/random`
+#### `GET https://yorumiapi.onrender.com/api/anime/random`
 Returns a random anime.
 
 ---
 
 ### Anime — HiAnime
 
-#### `GET /api/anime/spotlight`
+#### `GET https://yorumiapi.onrender.com/api/anime/spotlight`
 HiAnime spotlight carousel items.
 
-#### `GET /api/anime/az-list/:letter`
+#### `GET https://yorumiapi.onrender.com/api/anime/az-list/:letter`
 HiAnime alphabetical list.
 | Query | Type | Description |
 |---|---|---|
 | `page` | number | Page |
 
-#### `GET /api/anime/top10`
+#### `GET https://yorumiapi.onrender.com/api/anime/top10`
 Top 10 anime by range.
 | Query | Type | Values |
 |---|---|---|
@@ -162,7 +162,7 @@ Top 10 anime by range.
 
 These endpoints use `@consumet/extensions` → AnimeKai provider to scrape real HLS stream links.
 
-#### `GET /api/anime/search/scraper`
+#### `GET https://yorumiapi.onrender.com/api/anime/search/scraper`
 Search anime by title.
 | Query | Type | Description |
 |---|---|---|
@@ -186,7 +186,7 @@ Search anime by title.
 }
 ```
 
-#### `GET /api/anime/episodes/:session`
+#### `GET https://yorumiapi.onrender.com/api/anime/episodes/:session`
 Get episode list for an anime.
 | Query | Type | Description |
 |---|---|---|
@@ -212,17 +212,17 @@ Get episode list for an anime.
 }
 ```
 
-#### `GET /api/anime/episodes/:session/all`
+#### `GET https://yorumiapi.onrender.com/api/anime/episodes/:session/all`
 Get all episodes across all pages in one call.
 
-#### `GET /api/anime/links/:session/:episode`
+#### `GET https://yorumiapi.onrender.com/api/anime/links/:session/:episode`
 Get HLS stream links for an episode. Both `:session` and `:episode` must be URL-encoded.
 
 > ⚠️ The episode ID comes from the `session` field in the episodes response (e.g. `naruto-shippuden-mv9v#ep=1`). URL-encode it before use.
 
 **Example:**
 ```
-GET /api/anime/links/naruto-shippuden-mv9v/naruto-shippuden-mv9v%23ep%3D1
+GET https://yorumiapi.onrender.com/api/anime/links/naruto-shippuden-mv9v/naruto-shippuden-mv9v%23ep%3D1
 ```
 
 **Response:**
@@ -246,7 +246,7 @@ GET /api/anime/links/naruto-shippuden-mv9v/naruto-shippuden-mv9v%23ep%3D1
 }
 ```
 
-#### `GET /api/anime/proxy`
+#### `GET https://yorumiapi.onrender.com/api/anime/proxy`
 Proxies a stream or subtitle URL through the server, injecting required headers to bypass CDN hotlink protection. Used internally by `play-test.html`.
 
 | Query | Type | Description |
@@ -260,19 +260,19 @@ Proxies a stream or subtitle URL through the server, injecting required headers 
 
 ### Manga — AniList Metadata
 
-#### `GET /api/manga/top`
+#### `GET https://yorumiapi.onrender.com/api/manga/top`
 Top manga from AniList.
 
-#### `GET /api/manga/popular`
+#### `GET https://yorumiapi.onrender.com/api/manga/popular`
 Popular manga.
 
-#### `GET /api/manga/top/manhwa`
+#### `GET https://yorumiapi.onrender.com/api/manga/top/manhwa`
 Top manhwa.
 
-#### `GET /api/manga/trending`
+#### `GET https://yorumiapi.onrender.com/api/manga/trending`
 Trending manga.
 
-#### `GET /api/manga/search`
+#### `GET https://yorumiapi.onrender.com/api/manga/search`
 Search manga via AniList.
 | Query | Type | Description |
 |---|---|---|
@@ -280,23 +280,23 @@ Search manga via AniList.
 | `page` | number | Page |
 | `limit` | number | Items per page |
 
-#### `GET /api/manga/:id`
+#### `GET https://yorumiapi.onrender.com/api/manga/:id`
 Full manga details by AniList ID.
 
-#### `GET /api/manga/genre/:name`
+#### `GET https://yorumiapi.onrender.com/api/manga/genre/:name`
 Manga by genre.
 
-#### `GET /api/manga/az-list/:letter`
+#### `GET https://yorumiapi.onrender.com/api/manga/az-list/:letter`
 Manga alphabetically.
 
-#### `GET /api/manga/random`
+#### `GET https://yorumiapi.onrender.com/api/manga/random`
 Random manga.
 
 ---
 
 ### Manga — Scraper (MangaKatana)
 
-#### `GET /api/manga/scraper/search`
+#### `GET https://yorumiapi.onrender.com/api/manga/scraper/search`
 Search manga by title.
 | Query | Type | Description |
 |---|---|---|
@@ -317,10 +317,10 @@ Search manga by title.
 }
 ```
 
-#### `GET /api/manga/scraper/details/:mangaId`
+#### `GET https://yorumiapi.onrender.com/api/manga/scraper/details/:mangaId`
 Full manga details including chapter list. Supports both AniList numeric IDs and scraper `mk:` prefixed IDs.
 
-#### `GET /api/manga/scraper/chapters/:mangaId`
+#### `GET https://yorumiapi.onrender.com/api/manga/scraper/chapters/:mangaId`
 Chapter list for a manga.
 
 **Response:**
@@ -338,7 +338,7 @@ Chapter list for a manga.
 }
 ```
 
-#### `GET /api/manga/scraper/pages`
+#### `GET https://yorumiapi.onrender.com/api/manga/scraper/pages`
 Page image URLs for a chapter.
 | Query | Type | Description |
 |---|---|---|
@@ -354,16 +354,16 @@ Page image URLs for a chapter.
 }
 ```
 
-#### `POST /api/manga/scraper/prefetch`
+#### `POST https://yorumiapi.onrender.com/api/manga/scraper/prefetch`
 Pre-warm the chapter pages cache for multiple chapters.
 ```json
 { "urls": ["https://...", "https://..."] }
 ```
 
-#### `GET /api/manga/scraper/hot-updates`
+#### `GET https://yorumiapi.onrender.com/api/manga/scraper/hot-updates`
 Recently updated manga from MangaKatana.
 
-#### `GET /api/manga/scraper/spotlight`
+#### `GET https://yorumiapi.onrender.com/api/manga/scraper/spotlight`
 Enriched spotlight — AniList trending manga with latest chapter data from MangaKatana.
 
 ---
@@ -372,10 +372,10 @@ Enriched spotlight — AniList trending manga with latest chapter data from Mang
 
 Maps AniList IDs to scraper session IDs (stored in the database).
 
-#### `GET /api/mapping/:id`
+#### `GET https://yorumiapi.onrender.com/api/mapping/:id`
 Get mapping by AniList ID.
 
-#### `POST /api/mapping`
+#### `POST https://yorumiapi.onrender.com/api/mapping`
 Create a new mapping.
 ```json
 {
@@ -388,7 +388,7 @@ Create a new mapping.
 #### `DELETE /api/mapping/:id`
 Delete a mapping.
 
-#### `POST /api/mapping/identify`
+#### `POST https://yorumiapi.onrender.com/api/mapping/identify`
 Auto-identify a scraper ID from a slug and title.
 ```json
 { "slug": "naruto-shippuden", "title": "Naruto: Shippuden" }
@@ -398,10 +398,10 @@ Auto-identify a scraper ID from a slug and title.
 
 ### User
 
-#### `GET /api/user/avatar`
+#### `GET https://yorumiapi.onrender.com/api/user/avatar`
 Get the current user avatar URL.
 
-#### `POST /api/user/avatar`
+#### `POST https://yorumiapi.onrender.com/api/user/avatar`
 Set the user avatar URL.
 ```json
 { "avatarUrl": "https://example.com/avatar.png" }
@@ -412,13 +412,13 @@ Set the user avatar URL.
 ## Typical Anime Streaming Flow
 
 ```
-1. Search:   GET /api/anime/search/scraper?q=one+piece
+1. Search:   GET https://yorumiapi.onrender.com/api/anime/search/scraper?q=one+piece
              → Get anime `session` ID (e.g. "one-piece-av9v")
 
-2. Episodes: GET /api/anime/episodes/one-piece-av9v
+2. Episodes: GET https://yorumiapi.onrender.com/api/anime/episodes/one-piece-av9v
              → Get list of episodes with `session` IDs
 
-3. Stream:   GET /api/anime/links/one-piece-av9v/<url-encoded-episode-session>
+3. Stream:   GET https://yorumiapi.onrender.com/api/anime/links/one-piece-av9v/<url-encoded-episode-session>
              → Returns HLS .m3u8 URL + subtitles
 
 4. Play:     Use hls.js to load the m3u8 URL through the /proxy endpoint
@@ -428,13 +428,13 @@ Set the user avatar URL.
 ## Typical Manga Reading Flow
 
 ```
-1. Search:   GET /api/manga/scraper/search?q=berserk
+1. Search:   GET https://yorumiapi.onrender.com/api/manga/scraper/search?q=berserk
              → Get manga `id` (e.g. "mk:berserk.1")
 
-2. Chapters: GET /api/manga/scraper/chapters/mk:berserk.1
+2. Chapters: GET https://yorumiapi.onrender.com/api/manga/scraper/chapters/mk:berserk.1
              → Get list of chapters with `url` fields
 
-3. Pages:    GET /api/manga/scraper/pages?url=<chapter-url>
+3. Pages:    GET https://yorumiapi.onrender.com/api/manga/scraper/pages?url=<chapter-url>
              → Returns page image URLs to render in order
 ```
 
