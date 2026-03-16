@@ -31,6 +31,7 @@
     </div>
 
     <div id="results"></div>
+    <div id="ep-count" style="max-width:800px;width:100%;font-size:0.75rem;color:#555;margin-bottom:6px;"></div>
     <div id="status">Enter an anime ID and click Load Episodes.</div>
 
     <video id="video" controls crossorigin="anonymous"></video>
@@ -60,7 +61,8 @@
                 }
 
                 status.className = 'ok';
-                status.textContent = `Found ${episodeList.length} episodes. Click one to play.`;
+                status.textContent = `Click an episode to play.`;
+                document.getElementById('ep-count').textContent = `${episodeList.length} episodes`;
 
                 episodeList.forEach(ep => {
                     const btn = document.createElement('button');
@@ -130,7 +132,15 @@
                 }
 
                 if (stream.isHls && Hls.isSupported()) {
-                    hlsInstance = new Hls();
+                    hlsInstance = new Hls({
+                        // Proxy HLS encryption keys through our backend to avoid CORS errors
+                        xhrSetup: (xhr, url) => {
+                            if (url.includes('.key') || (url.includes('http') && !url.startsWith(location.origin))) {
+                                const proxied = `${BASE}/proxy?url=${encodeURIComponent(url)}&referer=${encodeURIComponent(referer)}`;
+                                xhr.open('GET', proxied, true);
+                            }
+                        }
+                    });
                     hlsInstance.loadSource(proxyUrl);
                     hlsInstance.attachMedia(video);
                     hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => video.play());

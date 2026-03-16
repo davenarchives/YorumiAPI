@@ -12,7 +12,7 @@ export interface AnimeSearchResult {
     dub?: number;
     year?: string;
     score?: string;
-    session: string; // Unified ID
+    session: string;
 }
 
 export interface Episode {
@@ -44,19 +44,39 @@ export interface StreamResponse {
 }
 
 export class AniwatchScraper {
-    private provider: InstanceType<typeof ANIME.AnimePahe>;
+    private animekai: InstanceType<typeof ANIME.AnimeKai>;
+    private animepahe: InstanceType<typeof ANIME.AnimePahe>;
 
     constructor() {
-        this.provider = new ANIME.AnimePahe();
+        this.animekai = new ANIME.AnimeKai();
+        this.animepahe = new ANIME.AnimePahe();
     }
 
-    async close() {
-        // No browser instance to close with Consumet
-    }
+    async close() {}
 
     async search(query: string): Promise<AnimeSearchResult[]> {
+        // Try AnimeKai first (better metadata + subtitles), fall back to AnimePahe on servers where Cloudflare blocks
         try {
-            const res = await this.provider.search(query);
+            const res = await this.animekai.search(query);
+            const results = (res.results || []).map((item: any) => ({
+                id: item.id,
+                session: item.id,
+                title: typeof item.title === 'object' ? (item.title.english || item.title.romaji || item.title.native || '') : (item.title as string),
+                url: `/anime/${item.id}`,
+                poster: item.image,
+                type: item.type,
+                episodes: item.episodes || item.totalEpisodes,
+                sub: item.sub,
+                dub: item.dub,
+            }));
+            if (results.length > 0) return results;
+            console.warn('[Search] AnimeKai returned empty — falling back to AnimePahe');
+        } catch (err) {
+            console.warn('[Search] AnimeKai failed — falling back to AnimePahe:', (err as Error).message);
+        }
+
+        try {
+            const res = await this.animepahe.search(query);
             return (res.results || []).map((item: any) => ({
                 id: item.id,
                 session: item.id,
@@ -66,8 +86,8 @@ export class AniwatchScraper {
                 type: item.type,
                 episodes: item.episodes || item.totalEpisodes,
             }));
-        } catch (error) {
-            console.error('AnimePahe search error:', error);
+        } catch (err) {
+            console.error('[Search] AnimePahe fallback also failed:', err);
             return [];
         }
     }
@@ -77,30 +97,55 @@ export class AniwatchScraper {
         pageNum: number = 1,
         debug: boolean = false
     ): Promise<{ episodes: Episode[], lastPage: number, raw?: string }> {
+        // Try AnimeKai first, fall back to AnimePahe
         try {
-            const info = await this.provider.fetchAnimeInfo(animeSessionId);
+            const info = await this.animekai.fetchAnimeInfo(animeSessionId);
             const eps = (info.episodes || []) as any[];
-            const episodes: Episode[] = eps.map((ep: any) => ({
-                id: ep.id,
-                session: ep.id,
-                episodeNumber: ep.number,
-                url: `/play/${animeSessionId}/${ep.id}`,
-                title: ep.title,
-                // AnimePahe uses isDub (true = dubbed, false = subbed)
-                isSubbed: ep.isDub === false,
-                isDubbed: ep.isDub === true,
-            }));
+            if (eps.length > 0) {
+                return {
+                    episodes: eps.map((ep: any) => ({
+                        id: ep.id,
+                        session: ep.id,
+                        episodeNumber: ep.number,
+                        url: `/play/${animeSessionId}/${ep.id}`,
+                        title: ep.title,
+                        isSubbed: ep.isSubbed,
+                        isDubbed: ep.isDubbed,
+                        isFiller: ep.isFiller,
+                    })),
+                    lastPage: 1
+                };
+            }
+            console.warn('[Episodes] AnimeKai returned empty — falling back to AnimePahe');
+        } catch (err) {
+            console.warn('[Episodes] AnimeKai failed — falling back to AnimePahe:', (err as Error).message);
+        }
 
-            return { episodes, lastPage: 1 };
-        } catch (error) {
-            console.error('AnimePahe getEpisodes error:', error);
+        try {
+            const info = await this.animepahe.fetchAnimeInfo(animeSessionId);
+            const eps = (info.episodes || []) as any[];
+            return {
+                episodes: eps.map((ep: any) => ({
+                    id: ep.id,
+                    session: ep.id,
+                    episodeNumber: ep.number,
+                    url: `/play/${animeSessionId}/${ep.id}`,
+                    title: ep.title,
+                    isSubbed: ep.isDub === false,
+                    isDubbed: ep.isDub === true,
+                })),
+                lastPage: 1
+            };
+        } catch (err) {
+            console.error('[Episodes] AnimePahe fallback also failed:', err);
             return { episodes: [], lastPage: 1 };
         }
     }
 
     async getLinks(animeSession: string, episodeSession: string): Promise<StreamResponse | null> {
+        // Try AnimeKai first (has subtitles), fall back to AnimePahe
         try {
-            const res = await this.provider.fetchEpisodeSources(episodeSession);
+            const res = await this.animekai.fetchEpisodeSources(episodeSession);
             const sources = (res.sources || []).map((source: any) => ({
                 quality: source.quality || 'auto',
                 audio: 'sub',
@@ -108,16 +153,30 @@ export class AniwatchScraper {
                 directUrl: source.url,
                 isHls: source.isM3U8 || false,
             }));
+            if (sources.length > 0) {
+                const subtitles = (res.subtitles || []).map((sub: any) => ({
+                    url: sub.url,
+                    lang: sub.lang || sub.language || 'Unknown'
+                }));
+                return { headers: res.headers || {}, sources, subtitles };
+            }
+            console.warn('[Links] AnimeKai returned empty sources — falling back to AnimePahe');
+        } catch (err) {
+            console.warn('[Links] AnimeKai failed — falling back to AnimePahe:', (err as Error).message);
+        }
 
-            // AnimePahe may not provide subtitle tracks
-            const subtitles = (res.subtitles || []).map((sub: any) => ({
-                url: sub.url,
-                lang: sub.lang || sub.language || 'Unknown'
+        try {
+            const res = await this.animepahe.fetchEpisodeSources(episodeSession);
+            const sources = (res.sources || []).map((source: any) => ({
+                quality: source.quality || 'auto',
+                audio: 'sub',
+                url: source.url,
+                directUrl: source.url,
+                isHls: source.isM3U8 || false,
             }));
-
-            return { headers: res.headers || {}, sources, subtitles };
-        } catch (error) {
-            console.error('AnimePahe getLinks error:', error);
+            return { headers: res.headers || {}, sources, subtitles: [] };
+        } catch (err) {
+            console.error('[Links] AnimePahe fallback also failed:', err);
             return null;
         }
     }
