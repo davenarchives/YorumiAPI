@@ -21,6 +21,7 @@ axios.interceptors.request.use((config) => {
 });
 
 import anilistRoutes from './api/anilist/anilist.routes';
+import { anilistService } from './api/anilist/anilist.service';
 import mangaScraperRoutes from './api/scraper/mangascraper.routes';
 import mangaAnilistRoutes from './api/manga/manga.anilist.routes';
 import hianimeRoutes from './api/scraper/hianime.routes';
@@ -43,6 +44,60 @@ app.use('/api/manga/scraper', mangaScraperRoutes);
 app.use('/api/anime', hianimeRoutes);
 app.use('/api/anime', animeScraperRoutes);
 app.use('/api/user', userRoutes);
+
+// Legacy top aliases
+app.get('/api/top/anime', async (req, res) => {
+    try {
+        const page = req.query.page ? parseInt(req.query.page as string) : 1;
+        const perPage = req.query.limit ? parseInt(req.query.limit as string) : 24;
+        const data = await anilistService.getTopAnime(page, perPage);
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch top anime' });
+    }
+});
+
+app.get('/api/top/manga', async (req, res) => {
+    try {
+        const page = req.query.page ? parseInt(req.query.page as string) : 1;
+        const perPage = req.query.limit ? parseInt(req.query.limit as string) : 24;
+        const data = await anilistService.getTopManga(page, perPage);
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch top manga' });
+    }
+});
+
+// Legacy seasonal alias
+app.get('/api/anime/seasonal', async (req, res) => {
+    try {
+        const page = req.query.page ? parseInt(req.query.page as string) : 1;
+        const perPage = req.query.limit ? parseInt(req.query.limit as string) : 50;
+        const data = await anilistService.getPopularThisSeason(page, perPage);
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch seasonal anime' });
+    }
+});
+
+
+app.get('/api/top/manga', async (req, res) => {
+    try {
+        const page = req.query.page ? parseInt(req.query.page as string) : 1;
+        const perPage = req.query.limit ? parseInt(req.query.limit as string) : 24;
+        const data = await anilistService.getTopManga(page, perPage);
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch top manga' });
+    }
+});
+
+
+app.get('/api/top/manga', (req, res, next) => {
+    req.url = '/top' + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '');
+    mangaAnilistRoutes(req, res, next as any);
+});
+
 
 // Mapping Routes
 app.get('/api/mapping/:id', async (req, res) => {
