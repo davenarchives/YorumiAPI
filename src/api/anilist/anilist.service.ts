@@ -850,52 +850,64 @@ export const anilistService = {
     },
 
     async getRandomAnime() {
-        // Fetch a random page of 50 items from the top 5000 popular anime
-        // 5000 / 50 per page = 100 pages
-        const randomPage = Math.floor(Math.random() * 100) + 1;
+        // Fetch a single random item from the top ~5000 popular anime
+        const perPage = 1;
+        const maxPages = 5000;
+        const randomPage = Math.floor(Math.random() * maxPages) + 1;
 
         const query = `
-            query ($page: Int) {
-                Page(page: $page, perPage: 50) {
+            query ($page: Int, $perPage: Int) {
+                Page(page: $page, perPage: $perPage) {
+                    pageInfo {
+                        total
+                        currentPage
+                        lastPage
+                        hasNextPage
+                    }
                     media(type: ANIME, sort: POPULARITY_DESC, isAdult: false) {
-                        id
+                        ${MEDIA_FIELDS}
                     }
                 }
             }
         `;
 
         try {
-            const response = await rateLimitedRequest(query, { page: randomPage });
-            const mediaList = response.data.Page.media;
-            // Return array of IDs or fallback
-            return mediaList.length > 0 ? mediaList.map((m: any) => ({ id: m.id })) : [{ id: 1 }];
+            const response = await rateLimitedRequest(query, { page: randomPage, perPage });
+            return response.data.Page;
         } catch (error) {
             console.error('Error fetching random anime:', error);
-            return [{ id: 1 }];
+            return { media: [], pageInfo: {} };
         }
     },
 
     async getRandomManga() {
-        // Fetch a random page of 50 items from the top 5000 popular manga
-        const randomPage = Math.floor(Math.random() * 100) + 1;
+        // Fetch a single random item from the top ~5000 popular manga
+        const perPage = 1;
+        const maxPages = 5000;
+        const randomPage = Math.floor(Math.random() * maxPages) + 1;
 
         const query = `
-            query ($page: Int) {
-                Page(page: $page, perPage: 50) {
+            query ($page: Int, $perPage: Int) {
+                Page(page: $page, perPage: $perPage) {
+                    pageInfo {
+                        total
+                        currentPage
+                        lastPage
+                        hasNextPage
+                    }
                     media(type: MANGA, sort: POPULARITY_DESC, isAdult: false) {
-                        id
+                        ${MEDIA_FIELDS}
                     }
                 }
             }
         `;
 
         try {
-            const response = await rateLimitedRequest(query, { page: randomPage });
-            const mediaList = response.data.Page.media;
-            return mediaList.length > 0 ? mediaList.map((m: any) => ({ id: m.id })) : [{ id: 1 }];
+            const response = await rateLimitedRequest(query, { page: randomPage, perPage });
+            return response.data.Page;
         } catch (error) {
             console.error('Error fetching random manga:', error);
-            return [{ id: 1 }];
+            return { media: [], pageInfo: {} };
         }
     },
 
