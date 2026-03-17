@@ -209,9 +209,16 @@ router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Hybrid Logic for Scraper IDs (e.g. s:one-piece-100)
+        let scraperId: string | null = null;
+
+        // Hybrid Logic for Scraper IDs (e.g. s:one-piece-100 or road-of-naruto-18220)
         if (id.startsWith('s:')) {
-            const scraperId = id.substring(2);
+            scraperId = id.substring(2);
+        } else if (!/^\d+$/.test(id)) {
+            scraperId = id;
+        }
+
+        if (scraperId) {
             // 1. Fetch scraper info
             const scraperDetails = await new HiAnimeScraper().getAnimeInfo(scraperId);
             if (!scraperDetails) {
@@ -230,7 +237,7 @@ router.get('/:id', async (req, res) => {
                     // 4. Return merged result (AniList metadata + Scraper ID hint)
                     return res.json({
                         ...anilistDetails,
-                        id: id, // Maintain s: prefix
+                        id: id, // Maintain whatever original ID was passed
                         mal_id: anilistDetails.id, // Keep AniList/MAL ID ref as mal_id
                         scraperId: scraperId
                     });
@@ -251,7 +258,7 @@ router.get('/:id', async (req, res) => {
             });
         }
 
-        const numericId = parseInt(id);
+        const numericId = parseInt(id, 10);
         if (isNaN(numericId)) {
             res.status(400).json({ error: 'Invalid ID' });
             return;
